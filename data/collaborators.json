@@ -1,0 +1,16 @@
+{
+  "collaboratore_1": {
+    "id": "collaboratore_1",
+    "name": "Collaboratore 1",
+    "active": true,
+    "calendarId": "",
+    "color": ""
+  },
+  "mario": {
+    "id": "mario",
+    "name": "mario",
+    "active": true,
+    "calendarId": "",
+    "color": ""
+  }
+}

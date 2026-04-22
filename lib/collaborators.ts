@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getSalonId, scopeRecordId } from "@/lib/salon";
 import {
   DEFAULT_SETTINGS,
   type OpeningHours,
@@ -64,6 +65,7 @@ export const DEFAULT_COLLABORATORS: Record<string, CollaboratorItem> = {
 
 type CollaboratorRow = {
   id: string;
+  salon_id?: string | null;
   name: string;
   active: boolean;
   calendar_id: string | null;
@@ -152,7 +154,8 @@ function sanitizeCollaborator(
   fallbackId?: string
 ): CollaboratorItem {
   const name = String(input.name || "").trim() || "Collaboratore";
-  const id = slugify(String(input.id || fallbackId || name)) || `collaboratore_${Date.now()}`;
+  const rawId = slugify(String(input.id || fallbackId || name)) || `collaboratore_${Date.now()}`;
+  const id = scopeRecordId(rawId);
 
   return {
     id,
@@ -218,6 +221,7 @@ function toRow(item: CollaboratorItem): CollaboratorRow {
 
   return {
     id: normalized.id,
+    salon_id: getSalonId(),
     name: normalized.name,
     active: normalized.active,
     calendar_id: String(normalized.calendarId || "").trim() || null,
@@ -256,6 +260,7 @@ export function serializeCollaborator(item: CollaboratorItem): CollaboratorPaylo
 
   return {
     id: normalized.id,
+    salon_id: getSalonId(),
     name: normalized.name,
     active: normalized.active,
     calendarId: normalized.calendarId || "",
@@ -304,8 +309,9 @@ export function deserializeCollaborator(
 
 async function seedDefaultCollaboratorsIfEmpty() {
   const { data, error } = await supabaseAdmin
-    .from("collaborators")
+     .from("collaborators")
     .select("id")
+    .eq("salon_id", getSalonId())
     .limit(1);
 
   if (error) throw error;
@@ -323,7 +329,7 @@ async function seedDefaultCollaboratorsIfEmpty() {
 export async function readCollaboratorsMap() {
   await seedDefaultCollaboratorsIfEmpty();
 
-  const { data, error } = await supabaseAdmin.from("collaborators").select("*");
+  const { data, error } = await supabaseAdmin.from("collaborators").select("*").eq("salon_id", getSalonId());
   if (error) throw error;
 
   const result: Record<string, CollaboratorItem> = {};
@@ -345,7 +351,7 @@ export async function saveCollaboratorsMap(input: Record<string, CollaboratorIte
 
   const rows = Object.values(normalized).map(toRow);
 
-  const existing = await supabaseAdmin.from("collaborators").select("id");
+  const existing = await supabaseAdmin.from("collaborators").select("id").eq("salon_id", getSalonId());
   if (existing.error) throw existing.error;
 
   const keepIds = new Set(rows.map((item) => item.id));
@@ -357,6 +363,7 @@ export async function saveCollaboratorsMap(input: Record<string, CollaboratorIte
     const deleted = await supabaseAdmin
       .from("collaborators")
       .delete()
+      .eq("salon_id", getSalonId())
       .in("id", deleteIds);
 
     if (deleted.error) throw deleted.error;
@@ -382,8 +389,9 @@ export async function getCollaboratorById(collaboratorId: string) {
   if (!normalizedId) return null;
 
   const { data, error } = await supabaseAdmin
-    .from("collaborators")
+     .from("collaborators")
     .select("*")
+    .eq("salon_id", getSalonId())
     .eq("id", normalizedId)
     .limit(1);
 
@@ -436,8 +444,9 @@ export async function deleteCollaborator(collaboratorId: string) {
   }
 
   const { error } = await supabaseAdmin
-    .from("collaborators")
+     .from("collaborators")
     .delete()
+    .eq("salon_id", getSalonId())
     .eq("id", normalizedId);
 
   if (error) throw error;

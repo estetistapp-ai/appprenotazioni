@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getSalonId, scopeRecordId } from "@/lib/salon";
 
 export type ServiceItem = {
   id: string;
@@ -10,6 +11,7 @@ export type ServiceItem = {
 
 type ServiceRow = {
   id: string;
+  salon_id?: string | null;
   name: string;
   duration_min: number;
   price: number;
@@ -53,7 +55,8 @@ function slugify(text: string) {
 
 function sanitizeService(input: Partial<ServiceItem>, fallbackId?: string): ServiceItem {
   const name = String(input.name || "").trim() || "Servizio";
-  const id = slugify(String(input.id || fallbackId || name)) || `servizio_${Date.now()}`;
+  const rawId = slugify(String(input.id || fallbackId || name)) || `servizio_${Date.now()}`;
+  const id = scopeRecordId(rawId);
   const durationMin = Math.max(5, Number(input.durationMin || 0) || 15);
   const price = Math.max(0, Number(input.price || 0) || 0);
 
@@ -82,6 +85,7 @@ function fromRow(row: ServiceRow): ServiceItem {
 function toRow(item: ServiceItem): ServiceRow {
   return {
     id: item.id,
+    salon_id: getSalonId(),
     name: item.name,
     duration_min: item.durationMin,
     price: item.price,
@@ -102,7 +106,7 @@ function normalizeServices(input: any): Record<string, ServiceItem> {
 }
 
 async function seedDefaultServicesIfEmpty() {
-  const { data, error } = await supabaseAdmin.from("services").select("id").limit(1);
+  const { data, error } = await supabaseAdmin.from("services").select("id").eq("salon_id", getSalonId()).limit(1);
   if (error) throw error;
 
   if ((data || []).length === 0) {
@@ -115,7 +119,7 @@ async function seedDefaultServicesIfEmpty() {
 export async function readServicesMap() {
   await seedDefaultServicesIfEmpty();
 
-  const { data, error } = await supabaseAdmin.from("services").select("*");
+  const { data, error } = await supabaseAdmin.from("services").select("*").eq("salon_id", getSalonId());
   if (error) throw error;
 
   const result: Record<string, ServiceItem> = {};
@@ -131,7 +135,7 @@ export async function saveServicesMap(input: Record<string, ServiceItem>) {
   const normalized = normalizeServices(input);
   const rows = Object.values(normalized).map(toRow);
 
-  const existing = await supabaseAdmin.from("services").select("id");
+  const existing = await supabaseAdmin.from("services").select("id").eq("salon_id", getSalonId());
   if (existing.error) throw existing.error;
 
   const keepIds = new Set(rows.map((item) => item.id));
@@ -140,7 +144,7 @@ export async function saveServicesMap(input: Record<string, ServiceItem>) {
     .filter((id: string) => !keepIds.has(id));
 
   if (deleteIds.length) {
-    const deleted = await supabaseAdmin.from("services").delete().in("id", deleteIds);
+    const deleted = await supabaseAdmin.from("services").delete().eq("salon_id", getSalonId()).in("id", deleteIds);
     if (deleted.error) throw deleted.error;
   }
 
@@ -161,8 +165,9 @@ export async function getServiceById(serviceId: string) {
   if (!normalizedId) return null;
 
   const { data, error } = await supabaseAdmin
-    .from("services")
+     .from("services")
     .select("*")
+    .eq("salon_id", getSalonId())
     .eq("id", normalizedId)
     .limit(1);
 
@@ -194,8 +199,9 @@ export async function deleteService(serviceId: string) {
   }
 
   const { error } = await supabaseAdmin
-    .from("services")
+     .from("services")
     .delete()
+    .eq("salon_id", getSalonId())
     .eq("id", normalizedId);
 
   if (error) throw error;

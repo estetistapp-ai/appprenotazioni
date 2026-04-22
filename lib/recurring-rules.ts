@@ -1,7 +1,9 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getSalonId } from "@/lib/salon";
 
 export type RecurringRuleRecord = {
   id?: string;
+  salonId?: string;
   customerName: string;
   phone: string;
   serviceId: string;
@@ -18,6 +20,7 @@ export type RecurringRuleRecord = {
 
 type RecurringRuleRow = {
   id?: string;
+  salon_id?: string | null;
   customer_name: string;
   phone: string;
   service_id: string;
@@ -37,6 +40,7 @@ type RecurringRuleRow = {
 
 function buildRow(record: RecurringRuleRecord, mode: "modern" | "legacy" | "hybrid"): Record<string, unknown> {
   const base = {
+    salon_id: record.salonId || getSalonId(),
     customer_name: record.customerName,
     phone: record.phone,
     service_id: record.serviceId,
@@ -97,12 +101,12 @@ export async function updateRecurringRuleMeta(id: string, patch: { createdEventI
   if (typeof patch.every === "number" && Number.isFinite(patch.every)) legacyPayload.frequency_interval = patch.every;
 
   try {
-    const { error } = await supabaseAdmin.from("recurring_rules").update(legacyPayload).eq("id", normalizedId);
+    const { error } = await supabaseAdmin.from("recurring_rules").update(legacyPayload).eq("salon_id", getSalonId()).eq("id", normalizedId);
     if (error) throw error;
     return;
   } catch (error: any) {
     if (isMissingColumnError(error, "frequency_interval")) {
-      const { error: retryError } = await supabaseAdmin.from("recurring_rules").update(modernPayload).eq("id", normalizedId);
+      const { error: retryError } = await supabaseAdmin.from("recurring_rules").update(modernPayload).eq("salon_id", getSalonId()).eq("id", normalizedId);
       if (retryError) throw retryError;
       return;
     }
@@ -111,19 +115,19 @@ export async function updateRecurringRuleMeta(id: string, patch: { createdEventI
 }
 
 export async function listRecurringRules() {
-  const { data, error } = await supabaseAdmin.from("recurring_rules").select("*").order("created_at", { ascending: false });
+  const { data, error } = await supabaseAdmin.from("recurring_rules").select("*").eq("salon_id", getSalonId()).order("created_at", { ascending: false });
   if (error) throw error;
   return data || [];
 }
 
 export async function getRecurringRuleById(id: string) {
-  const { data, error } = await supabaseAdmin.from("recurring_rules").select("*").eq("id", id).limit(1).maybeSingle();
+  const { data, error } = await supabaseAdmin.from("recurring_rules").select("*").eq("salon_id", getSalonId()).eq("id", id).limit(1).maybeSingle();
   if (error) throw error;
   return data || null;
 }
 
 export async function deleteRecurringRule(id: string) {
-  const { error } = await supabaseAdmin.from("recurring_rules").delete().eq("id", id);
+  const { error } = await supabaseAdmin.from("recurring_rules").delete().eq("salon_id", getSalonId()).eq("id", id);
   if (error) throw error;
 }
 
@@ -134,6 +138,7 @@ export async function getRecurringRuleByEventId(eventId: string) {
   const { data, error } = await supabaseAdmin
     .from("recurring_rules")
     .select("*")
+    .eq("salon_id", getSalonId())
     .contains("created_event_ids", [normalized])
     .order("created_at", { ascending: false })
     .limit(1)

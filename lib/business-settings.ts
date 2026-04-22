@@ -1,9 +1,10 @@
 import { DateTime } from "luxon";
 import { supabaseAdmin, maybeSingle } from "@/lib/supabase-admin";
+import { getSalonId, salonSettingsId } from "@/lib/salon";
 
 export const TIME_ZONE = "Europe/Rome";
 export const MIN_ADVANCE_MIN = 60;
-export const BUSINESS_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
+export const BUSINESS_SETTINGS_ID = salonSettingsId();
 
 export type OpeningWindow = {
   enabled: boolean;
@@ -42,6 +43,7 @@ export type BusinessSettingsPayload = {
 
 type BusinessSettingsRow = {
   id: string;
+  salon_id?: string | null;
   slot_minutes: number | null;
   min_advance_min: number | null;
   closed_weekdays: number[] | null;
@@ -218,6 +220,7 @@ function settingsToRow(settings: BusinessSettings): BusinessSettingsRow {
 
   return {
     id: BUSINESS_SETTINGS_ID,
+    salon_id: getSalonId(),
     slot_minutes: normalized.slotMinutes,
     min_advance_min: normalized.minAdvanceMin,
     closed_weekdays: normalized.closedWeekdays,
@@ -236,7 +239,8 @@ async function ensureSettingsRow() {
     supabaseAdmin
       .from("business_settings")
       .select("*")
-      .eq("id", BUSINESS_SETTINGS_ID)
+       .eq("id", BUSINESS_SETTINGS_ID)
+      .eq("salon_id", getSalonId())
   );
 
   if (!existing) {
@@ -255,7 +259,8 @@ export async function readBusinessSettings(): Promise<BusinessSettings> {
     supabaseAdmin
       .from("business_settings")
       .select("*")
-      .eq("id", BUSINESS_SETTINGS_ID)
+       .eq("id", BUSINESS_SETTINGS_ID)
+      .eq("salon_id", getSalonId())
   );
 
   return rowToSettings(data as BusinessSettingsRow | null | undefined);

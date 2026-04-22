@@ -25,6 +25,7 @@ export type CollaboratorItem = {
 
 export type CollaboratorPayload = {
   id: string;
+  salon_id?: string;
   name: string;
   active: boolean;
   calendarId?: string;

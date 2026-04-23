@@ -1,7 +1,7 @@
 {
-  "name": "Prenotazioni Online",
-  "short_name": "Prenota",
-  "description": "Prenota il tuo appuntamento in pochi secondi",
+  "name": "Salon Estetica",
+  "short_name": "Estetica",
+  "description": "Prenota il tuo trattamento estetico in pochi secondi",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f0f0f",

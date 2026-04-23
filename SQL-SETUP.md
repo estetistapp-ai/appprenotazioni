@@ -1,4 +1,4 @@
-# Setup SQL App Prenotazioni
+# Setup SQL Barber App
 
 1. Crea un progetto su Supabase.
 2. Apri SQL Editor e incolla il contenuto di `supabase/schema.sql`.

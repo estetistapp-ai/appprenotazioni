@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Prenotazioni Online",
-  description: "Prenota il tuo appuntamento in pochi secondi",
-  applicationName: "Prenotazioni Online",
+  title: "Salon Estetica",
+  description: "Prenota il tuo trattamento estetico in pochi secondi",
+  applicationName: "Salon Estetica",
   manifest: "/manifest.json",
   icons: {
     icon: [

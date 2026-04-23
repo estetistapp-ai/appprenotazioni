@@ -1225,10 +1225,6 @@ const calendarGroupNames = useMemo(
             {servicesMessage && <div className={`badge ${servicesMessage.includes("successo") ? "ok" : "error"}`}>{servicesMessage}</div>}
             <div className="gridTwoCols">
               <div>
-                <label>ID servizio (facoltativo)</label>
-                <input value={serviceForm.id} onChange={(e) => setServiceForm({ ...serviceForm, id: e.target.value })} placeholder="es. barba_taglio" />
-              </div>
-              <div>
                 <label>Nome servizio</label>
                 <input value={serviceForm.name} onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })} placeholder="es. Taglio + Barba" />
               </div>

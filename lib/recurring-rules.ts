@@ -3,7 +3,6 @@ import { getSalonId } from "@/lib/salon";
 
 export type RecurringRuleRecord = {
   id?: string;
-  salonId?: string;
   customerName: string;
   phone: string;
   serviceId: string;
@@ -40,7 +39,7 @@ type RecurringRuleRow = {
 
 function buildRow(record: RecurringRuleRecord, mode: "modern" | "legacy" | "hybrid"): Record<string, unknown> {
   const base = {
-    salon_id: record.salonId || getSalonId(),
+    salon_id: getSalonId(),
     customer_name: record.customerName,
     phone: record.phone,
     service_id: record.serviceId,

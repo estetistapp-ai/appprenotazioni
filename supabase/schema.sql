@@ -3,32 +3,10 @@ begin;
 create extension if not exists pgcrypto;
 
 -- =====================================================
--- SALONS
--- =====================================================
-create table if not exists public.salons (
-  id text primary key,
-  name text not null,
-  slug text not null unique,
-  active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
-insert into public.salons (id, name, slug, active)
-select
-  'salone_1',
-  'Salon Parrucchiere',
-  'salone-1',
-  true
-where not exists (
-  select 1 from public.salons where id = 'salone_1'
-);
-
--- =====================================================
 -- BUSINESS SETTINGS
 -- =====================================================
 create table if not exists public.business_settings (
   id text primary key,
-  salon_id text not null,
   slot_minutes integer not null default 15,
   min_advance_min integer not null default 60,
   closed_weekdays integer[] not null default array[0,1],
@@ -39,7 +17,7 @@ create table if not exists public.business_settings (
   afternoon_enabled boolean not null default true,
   afternoon_start text not null default '15:30',
   afternoon_end text not null default '20:00',
-  brand_title text not null default 'Salon Parrucchiere',
+  brand_title text not null default 'Salon Estetica',
   brand_subtitle text not null default 'Prenota il tuo appuntamento in pochi secondi',
   brand_description text not null default '',
   logo_url text,
@@ -49,7 +27,6 @@ create table if not exists public.business_settings (
 );
 
 alter table public.business_settings
-  add column if not exists salon_id text,
   add column if not exists slot_minutes integer,
   add column if not exists min_advance_min integer,
   add column if not exists closed_weekdays integer[],
@@ -80,16 +57,12 @@ set
   afternoon_enabled = coalesce(afternoon_enabled, true),
   afternoon_start = coalesce(afternoon_start, '15:30'),
   afternoon_end = coalesce(afternoon_end, '20:00'),
-  brand_title = coalesce(brand_title, 'Salon Parrucchiere'),
+  brand_title = coalesce(brand_title, 'Salon Estetica'),
   brand_subtitle = coalesce(brand_subtitle, 'Prenota il tuo appuntamento in pochi secondi'),
   brand_description = coalesce(brand_description, ''),
   updated_at = now();
 
-update public.business_settings
-set salon_id = coalesce(salon_id, 'salone_1');
-
 alter table public.business_settings
-  alter column salon_id set not null,
   alter column slot_minutes set default 15,
   alter column min_advance_min set default 60,
   alter column closed_weekdays set default array[0,1],
@@ -100,12 +73,11 @@ alter table public.business_settings
   alter column afternoon_enabled set default true,
   alter column afternoon_start set default '15:30',
   alter column afternoon_end set default '20:00',
-  alter column brand_title set default 'Salon Parrucchiere',
+  alter column brand_title set default 'Salon Estetica',
   alter column brand_subtitle set default 'Prenota il tuo appuntamento in pochi secondi',
   alter column brand_description set default '';
 
 alter table public.business_settings
-  alter column salon_id set not null,
   alter column slot_minutes set not null,
   alter column min_advance_min set not null,
   alter column closed_weekdays set not null,
@@ -132,23 +104,8 @@ begin
   end if;
 end $$;
 
-do $$
-begin
-  if not exists (
-    select 1 from pg_constraint where conname = 'business_settings_salon_id_fkey'
-  ) then
-    alter table public.business_settings
-      add constraint business_settings_salon_id_fkey
-      foreign key (salon_id) references public.salons(id) on delete cascade;
-  end if;
-end $$;
-
-create unique index if not exists idx_business_settings_salon_id
-on public.business_settings(salon_id);
-
 insert into public.business_settings (
   id,
-  salon_id,
   slot_minutes,
   min_advance_min,
   closed_weekdays,
@@ -167,8 +124,7 @@ insert into public.business_settings (
   icon_512
 )
 select
-  'salone_1__settings',
-  'salone_1',
+  '00000000-0000-0000-0000-000000000001',
   15,
   60,
   array[0,1],
@@ -179,14 +135,14 @@ select
   true,
   '15:30',
   '20:00',
-  'Salon Parrucchiere',
+  'Salon Estetica',
   'Prenota il tuo appuntamento in pochi secondi',
   '',
   '',
   '/icons/icon-192.png',
   '/icons/icon-512.png'
 where not exists (
-  select 1 from public.business_settings where salon_id = 'salone_1'
+  select 1 from public.business_settings
 );
 
 -- =====================================================
@@ -194,7 +150,6 @@ where not exists (
 -- =====================================================
 create table if not exists public.services (
   id text primary key,
-  salon_id text not null,
   name text not null,
   duration_min integer not null,
   price numeric(10,2) not null default 0,
@@ -203,7 +158,6 @@ create table if not exists public.services (
 );
 
 alter table public.services
-  add column if not exists salon_id text,
   add column if not exists duration_min integer,
   add column if not exists price numeric(10,2),
   add column if not exists active boolean,
@@ -216,17 +170,12 @@ set
   active = coalesce(active, true),
   updated_at = now();
 
-update public.services
-set salon_id = coalesce(salon_id, 'salone_1');
-
 alter table public.services
-  alter column salon_id set not null,
   alter column duration_min set default 30,
   alter column price set default 0,
   alter column active set default true;
 
 alter table public.services
-  alter column salon_id set not null,
   alter column duration_min set not null,
   alter column price set not null,
   alter column active set not null,
@@ -243,28 +192,13 @@ begin
   end if;
 end $$;
 
-do $$
-begin
-  if not exists (
-    select 1 from pg_constraint where conname = 'services_salon_id_fkey'
-  ) then
-    alter table public.services
-      add constraint services_salon_id_fkey
-      foreign key (salon_id) references public.salons(id) on delete cascade;
-  end if;
-end $$;
-
-create index if not exists idx_services_salon_id
-on public.services(salon_id);
-
-insert into public.services (id, salon_id, name, duration_min, price, active)
+insert into public.services (id, name, duration_min, price, active)
 values
-  ('salone_1__barba', 'salone_1', 'Barba', 15, 10, true),
-  ('salone_1__taglio', 'salone_1', 'Taglio', 30, 15, true),
-  ('salone_1__barba_taglio', 'salone_1', 'Barba + Taglio', 45, 20, true)
+  ('barba', 'Barba', 15, 10, true),
+  ('taglio', 'Taglio', 30, 15, true),
+  ('barba_taglio', 'Barba + Taglio', 45, 20, true)
 on conflict (id) do update
 set
-  salon_id = excluded.salon_id,
   name = excluded.name,
   duration_min = excluded.duration_min,
   price = excluded.price,
@@ -275,7 +209,6 @@ set
 -- =====================================================
 create table if not exists public.collaborators (
   id text primary key,
-  salon_id text not null,
   name text not null,
   active boolean not null default true,
   calendar_id text,
@@ -296,7 +229,6 @@ create table if not exists public.collaborators (
 );
 
 alter table public.collaborators
-  add column if not exists salon_id text,
   add column if not exists calendar_id text,
   add column if not exists color text,
   add column if not exists weekly_off_days integer[] not null default array[]::integer[],
@@ -329,29 +261,8 @@ set
   afternoon_close = coalesce(afternoon_close, afternoon_end, '20:00'),
   updated_at = now();
 
-update public.collaborators
-set salon_id = coalesce(salon_id, 'salone_1');
-
-alter table public.collaborators
-  alter column salon_id set not null;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_constraint where conname = 'collaborators_salon_id_fkey'
-  ) then
-    alter table public.collaborators
-      add constraint collaborators_salon_id_fkey
-      foreign key (salon_id) references public.salons(id) on delete cascade;
-  end if;
-end $$;
-
-create index if not exists idx_collaborators_salon_id
-on public.collaborators(salon_id);
-
 insert into public.collaborators (
   id,
-  salon_id,
   name,
   active,
   calendar_id,
@@ -370,8 +281,7 @@ insert into public.collaborators (
   afternoon_close
 )
 select
-  'salone_1__collaboratore_1',
-  'salone_1',
+  'collaboratore_1',
   'Collaboratore 1',
   true,
   'collaboratore_1',
@@ -388,14 +298,13 @@ select
   '20:00',
   '15:30',
   '20:00'
-where not exists (select 1 from public.collaborators where salon_id = 'salone_1');
+where not exists (select 1 from public.collaborators);
 
 -- =====================================================
 -- APPOINTMENTS (DATABASE ONLY)
 -- =====================================================
 create table if not exists public.appointments (
   id uuid primary key default gen_random_uuid(),
-  salon_id text not null,
   event_id text not null unique,
   google_event_id text,
   calendar_id text not null,
@@ -425,7 +334,6 @@ create table if not exists public.appointments (
 );
 
 alter table public.appointments
-  add column if not exists salon_id text,
   add column if not exists google_event_id text,
   add column if not exists customer_phone text,
   add column if not exists customer_names text[],
@@ -444,12 +352,6 @@ set
   start_time = coalesce(start_time, time),
   end_time = coalesce(end_time, ''),
   created_at = coalesce(created_at, now());
-
-update public.appointments
-set salon_id = coalesce(salon_id, 'salone_1');
-
-alter table public.appointments
-  alter column salon_id set not null;
 
 do $$
 begin
@@ -473,31 +375,17 @@ begin
   end if;
 end $$;
 
-do $$
-begin
-  if not exists (
-    select 1 from pg_constraint where conname = 'appointments_salon_id_fkey'
-  ) then
-    alter table public.appointments
-      add constraint appointments_salon_id_fkey
-      foreign key (salon_id) references public.salons(id) on delete cascade;
-  end if;
-end $$;
-
 create index if not exists idx_appointments_start_iso on public.appointments(start_iso);
 create index if not exists idx_appointments_end_iso on public.appointments(end_iso);
 create index if not exists idx_appointments_collaborator on public.appointments(collaborator_id);
 create index if not exists idx_appointments_date on public.appointments(date);
 create index if not exists idx_appointments_status on public.appointments(status);
-create index if not exists idx_appointments_salon_id on public.appointments(salon_id);
-create index if not exists idx_appointments_salon_collaborator_date on public.appointments(salon_id, collaborator_id, date);
 
 -- =====================================================
 -- RECURRING RULES
 -- =====================================================
 create table if not exists public.recurring_rules (
   id uuid primary key default gen_random_uuid(),
-  salon_id text not null,
   customer_name text not null,
   phone text not null default '',
   service_id text not null,
@@ -513,15 +401,6 @@ create table if not exists public.recurring_rules (
   created_at timestamptz not null default now()
 );
 
-alter table public.recurring_rules
-  add column if not exists salon_id text;
-
-update public.recurring_rules
-set salon_id = coalesce(salon_id, 'salone_1');
-
-alter table public.recurring_rules
-  alter column salon_id set not null;
-
 do $$
 begin
   if not exists (
@@ -532,20 +411,6 @@ begin
       check (unit in ('days', 'weeks', 'months'));
   end if;
 end $$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_constraint where conname = 'recurring_rules_salon_id_fkey'
-  ) then
-    alter table public.recurring_rules
-      add constraint recurring_rules_salon_id_fkey
-      foreign key (salon_id) references public.salons(id) on delete cascade;
-  end if;
-end $$;
-
-create index if not exists idx_recurring_rules_salon_id
-on public.recurring_rules(salon_id);
 
 -- =====================================================
 -- UPDATED_AT TRIGGER
@@ -577,83 +442,5 @@ create trigger trg_collaborators_updated_at
 before update on public.collaborators
 for each row
 execute function public.set_updated_at();
-
--- =====================================================
--- MAX 5 COLLABORATORS
--- =====================================================
-create or replace function public.enforce_max_5_collaborators()
-returns trigger
-language plpgsql
-as $$
-begin
-  if (
-    select count(*)
-    from public.collaborators
-    where salon_id = new.salon_id
-      and id <> coalesce(new.id, '')
-  ) >= 5 then
-    raise exception 'Massimo 5 collaboratori consentiti per salone';
-  end if;
-  return new;
-end;
-$$;
-
-drop trigger if exists trg_enforce_max_5_collaborators on public.collaborators;
-create trigger trg_enforce_max_5_collaborators
-before insert on public.collaborators
-for each row
-execute function public.enforce_max_5_collaborators();
-
--- =====================================================
--- RLS
--- =====================================================
-alter table public.salons enable row level security;
-alter table public.business_settings enable row level security;
-alter table public.services enable row level security;
-alter table public.collaborators enable row level security;
-alter table public.appointments enable row level security;
-alter table public.recurring_rules enable row level security;
-
-drop policy if exists salons_all on public.salons;
-create policy salons_all
-on public.salons
-for all
-using (true)
-with check (true);
-
-drop policy if exists business_settings_all on public.business_settings;
-create policy business_settings_all
-on public.business_settings
-for all
-using (true)
-with check (true);
-
-drop policy if exists services_all on public.services;
-create policy services_all
-on public.services
-for all
-using (true)
-with check (true);
-
-drop policy if exists collaborators_all on public.collaborators;
-create policy collaborators_all
-on public.collaborators
-for all
-using (true)
-with check (true);
-
-drop policy if exists appointments_all on public.appointments;
-create policy appointments_all
-on public.appointments
-for all
-using (true)
-with check (true);
-
-drop policy if exists recurring_rules_all on public.recurring_rules;
-create policy recurring_rules_all
-on public.recurring_rules
-for all
-using (true)
-with check (true);
 
 commit;

@@ -1,10 +1,14 @@
 import { DateTime } from "luxon";
 import { supabaseAdmin, maybeSingle } from "@/lib/supabase-admin";
-import { getSalonId, salonSettingsId } from "@/lib/salon";
+import { getSalonId, salonScopedId } from "@/lib/salon";
 
 export const TIME_ZONE = "Europe/Rome";
 export const MIN_ADVANCE_MIN = 60;
-export const BUSINESS_SETTINGS_ID = salonSettingsId();
+export const BUSINESS_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
+
+function getBusinessSettingsId() {
+  return salonScopedId("settings");
+}
 
 export type OpeningWindow = {
   enabled: boolean;
@@ -219,7 +223,7 @@ function settingsToRow(settings: BusinessSettings): BusinessSettingsRow {
   const normalized = normalizeSettings(settings);
 
   return {
-    id: BUSINESS_SETTINGS_ID,
+    id: getBusinessSettingsId(),
     salon_id: getSalonId(),
     slot_minutes: normalized.slotMinutes,
     min_advance_min: normalized.minAdvanceMin,
@@ -239,8 +243,7 @@ async function ensureSettingsRow() {
     supabaseAdmin
       .from("business_settings")
       .select("*")
-       .eq("id", BUSINESS_SETTINGS_ID)
-      .eq("salon_id", getSalonId())
+       .eq("salon_id", getSalonId())
   );
 
   if (!existing) {
@@ -259,8 +262,7 @@ export async function readBusinessSettings(): Promise<BusinessSettings> {
     supabaseAdmin
       .from("business_settings")
       .select("*")
-       .eq("id", BUSINESS_SETTINGS_ID)
-      .eq("salon_id", getSalonId())
+       .eq("salon_id", getSalonId())
   );
 
   return rowToSettings(data as BusinessSettingsRow | null | undefined);
@@ -288,7 +290,7 @@ export async function saveBusinessSettings(
 
   const { error } = await supabaseAdmin
     .from("business_settings")
-    .upsert(settingsToRow(normalized), { onConflict: "id" });
+    .upsert(settingsToRow(normalized), { onConflict: "salon_id" });
 
   if (error) throw error;
 

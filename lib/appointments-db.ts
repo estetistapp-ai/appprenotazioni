@@ -3,7 +3,6 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getSalonId } from "@/lib/salon";
 
 export type AppointmentRecordInput = {
-  salonId?: string;
   eventId: string;
   calendarId: string;
   customerName: string;
@@ -27,7 +26,6 @@ export type AppointmentRecordInput = {
 
 export type AppointmentRecord = {
   id: string;
-  salonId?: string;
   eventId: string;
   calendarId: string;
   customerName: string;
@@ -179,7 +177,6 @@ function coalesceEndISO(row: AppointmentRow) {
 function rowToRecord(row: AppointmentRow): AppointmentRecord {
   return {
     id: row.id,
-    salonId: row.salon_id || getSalonId(),
     eventId: coalesceEventId(row),
     calendarId: coalesceCalendarId(row),
     customerName: String(row.customer_name || "").trim(),
@@ -221,7 +218,7 @@ function inputToRow(input: AppointmentRecordInput) {
     endDt.isValid ? endDt.toFormat("HH:mm") : "";
 
   return {
-    salon_id: input.salonId || getSalonId(),
+    salon_id: getSalonId(),
     event_id: String(input.eventId || "").trim(),
     google_event_id: String(input.eventId || "").trim(),
     calendar_id: String(input.calendarId || "").trim() || "primary",

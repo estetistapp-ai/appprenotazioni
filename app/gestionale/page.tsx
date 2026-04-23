@@ -1225,12 +1225,8 @@ const calendarGroupNames = useMemo(
             {servicesMessage && <div className={`badge ${servicesMessage.includes("successo") ? "ok" : "error"}`}>{servicesMessage}</div>}
             <div className="gridTwoCols">
               <div>
-                <label>ID servizio (facoltativo)</label>
-                <input value={serviceForm.id} onChange={(e) => setServiceForm({ ...serviceForm, id: e.target.value })} placeholder="es. barba_taglio" />
-              </div>
-              <div>
                 <label>Nome servizio</label>
-                <input value={serviceForm.name} onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })} placeholder="es. Taglio + Barba" />
+                <input value={serviceForm.name} onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })} placeholder="es. Servizio premium" />
               </div>
               <div>
                 <label>Durata (min)</label>
@@ -1252,7 +1248,6 @@ const calendarGroupNames = useMemo(
               <div key={service.id} className="holidayItem">
                 <div>
                   <strong>{service.name}</strong>
-                  <div className="muted">ID: {service.id}</div>
                   <div className="muted">{service.durationMin} min · €{service.price} · {service.active ? "Attivo" : "Disattivato"}</div>
                 </div>
                 <div className="bookingActions">

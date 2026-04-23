@@ -21,25 +21,28 @@ import {
   overlapsISO,
 } from "@/lib/collaborator-calendar";
 import { createAppointmentRecord } from "@/lib/appointments-db";
-import {
-  buildSlotsCacheKey,
-  readSlotsResultCache,
-  writeSlotsResultCache,
-  readPersistentSlotsResultCache,
-  writePersistentSlotsResultCache,
-  readInflightSlotsRequest,
-  writeInflightSlotsRequest,
-  clearInflightSlotsRequest,
-  invalidateSlotCaches,
-} from "@/lib/slot-cache";
 
 const DEFAULT_CALENDAR_ID =
   process.env.GOOGLE_CALENDAR_ID || process.env.CALENDAR_ID || "primary";
+
+const SLOT_RESULT_CACHE_TTL_MS = 30_000;
+
+type SlotsCacheEntry = {
+  expiresAt: number;
+  value: {
+    settings: Awaited<ReturnType<typeof readBusinessSettings>>;
+    slots: AvailableSlot[];
+  };
+};
+
+const slotsResultCache = new Map<string, SlotsCacheEntry>();
 
 type InflightSlotsEntry = Promise<{
   settings: Awaited<ReturnType<typeof readBusinessSettings>>;
   slots: AvailableSlot[];
 }>;
+
+const inflightSlotsRequests = new Map<string, InflightSlotsEntry>();
 
 export type AvailableSlot = {
   time: string;
@@ -71,6 +74,49 @@ type AvailabilityContext = {
 
 function normalizeId(value: unknown) {
   return String(value || "").trim().toLowerCase();
+}
+
+function buildSlotsCacheKey(args: {
+  date: string;
+  serviceId: string;
+  peopleCount: number;
+  preferredCollaboratorId?: string | null;
+  ignoreMinAdvance?: boolean;
+}) {
+  return [
+    normalizeId(args.date),
+    normalizeId(args.serviceId),
+    String(Math.max(1, Math.min(5, Number(args.peopleCount) || 1))),
+    normalizeId(args.preferredCollaboratorId),
+    args.ignoreMinAdvance ? "admin" : "standard",
+  ].join("__");
+}
+
+function cleanupSlotsResultCache() {
+  const now = Date.now();
+  for (const [key, entry] of slotsResultCache.entries()) {
+    if (entry.expiresAt <= now) {
+      slotsResultCache.delete(key);
+    }
+  }
+}
+
+function readSlotsResultCache(cacheKey: string) {
+  cleanupSlotsResultCache();
+  const entry = slotsResultCache.get(cacheKey);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    slotsResultCache.delete(cacheKey);
+    return null;
+  }
+  return entry.value;
+}
+
+function writeSlotsResultCache(cacheKey: string, value: SlotsCacheEntry["value"]) {
+  slotsResultCache.set(cacheKey, {
+    value,
+    expiresAt: Date.now() + SLOT_RESULT_CACHE_TTL_MS,
+  });
 }
 
 function buildSlotInterval(date: string, time: string, durationMin: number) {
@@ -561,6 +607,18 @@ export async function buildGroupBookingPlan(args: {
   });
 }
 
+function readInflightSlotsRequest(cacheKey: string) {
+  return inflightSlotsRequests.get(cacheKey) || null;
+}
+
+function writeInflightSlotsRequest(cacheKey: string, value: InflightSlotsEntry) {
+  inflightSlotsRequests.set(cacheKey, value);
+}
+
+function clearInflightSlotsRequest(cacheKey: string) {
+  inflightSlotsRequests.delete(cacheKey);
+}
+
 export async function getAvailableGroupSlots(args: {
   date: string;
   serviceId: string;
@@ -583,12 +641,6 @@ export async function getAvailableGroupSlots(args: {
   const cached = readSlotsResultCache(cacheKey);
   if (cached) {
     return cached;
-  }
-
-  const persistentCached = await readPersistentSlotsResultCache(cacheKey);
-  if (persistentCached) {
-    writeSlotsResultCache(cacheKey, persistentCached);
-    return persistentCached;
   }
 
   const inflight = readInflightSlotsRequest(cacheKey);
@@ -636,7 +688,6 @@ export async function getAvailableGroupSlots(args: {
 
     const result = { settings: ctx.settings, slots };
     writeSlotsResultCache(cacheKey, result);
-    await writePersistentSlotsResultCache(cacheKey, result);
     return result;
   })();
 
@@ -813,11 +864,6 @@ export async function createSingleBooking(args: {
     recurrenceLabel: String(args.recurrenceLabel || "").trim(),
     recurringRuleId: String(args.recurringRuleId || "").trim(),
     status: "confirmed",
-  });
-
-  invalidateSlotCaches({
-    date: args.date,
-    collaboratorIds: [collaborator.id],
   });
 
   return {

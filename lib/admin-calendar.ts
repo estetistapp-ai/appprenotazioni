@@ -8,7 +8,6 @@ import {
   listAppointmentsInRange,
 } from "@/lib/appointments-db";
 import { deleteRecurringRule, getRecurringRuleByEventId, getRecurringRuleById } from "@/lib/recurring-rules";
-import { invalidateSlotCaches } from "@/lib/slot-cache";
 
 export const TIME_ZONE = "Europe/Rome";
 
@@ -56,18 +55,10 @@ export async function deleteBooking(
       }
 
       await deleteRecurringRule(recurringRuleId);
-      const affected = linkedAppointments.map((item) => item.collaboratorId).filter(Boolean);
-      const affectedDate = linkedAppointments[0]?.date || null;
-      invalidateSlotCaches({ date: affectedDate, collaboratorIds: affected });
       return { ok: true, deletedScope: "series" };
     }
   }
 
-  const appointment = await getAppointmentByEventId(eventId);
   await deleteAppointmentRecord(eventId);
-  invalidateSlotCaches({
-    date: appointment?.date || null,
-    collaboratorIds: [appointment?.collaboratorId || ""],
-  });
   return { ok: true, deletedScope: "single" };
 }

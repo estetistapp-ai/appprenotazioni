@@ -6,7 +6,6 @@ import {
   weekdayNumberFromISO,
   fitsInsideOpeningHours,
 } from "@/lib/business-settings";
-import { getSalonId, matchesSalonScopedId, salonScopedId } from "@/lib/salon";
 
 export type CollaboratorAvailability = {
   weeklyOffDays: number[];
@@ -25,7 +24,6 @@ export type CollaboratorItem = {
 
 export type CollaboratorPayload = {
   id: string;
-  salon_id?: string;
   name: string;
   active: boolean;
   calendarId?: string;
@@ -53,23 +51,19 @@ function defaultAvailability(): CollaboratorAvailability {
   };
 }
 
-export function getDefaultCollaborators(): Record<string, CollaboratorItem> {
-  const id = salonScopedId("collaboratore_1");
-  return {
-    [id]: {
-      id,
+export const DEFAULT_COLLABORATORS: Record<string, CollaboratorItem> = {
+  collaboratore_1: {
+    id: "collaboratore_1",
     name: "Collaboratore 1",
     active: true,
     calendarId: "",
     color: "",
     availability: defaultAvailability(),
   },
-  };
-}
+};
 
 type CollaboratorRow = {
   id: string;
-  salon_id?: string | null;
   name: string;
   active: boolean;
   calendar_id: string | null;
@@ -224,7 +218,6 @@ function toRow(item: CollaboratorItem): CollaboratorRow {
 
   return {
     id: normalized.id,
-    salon_id: getSalonId(),
     name: normalized.name,
     active: normalized.active,
     calendar_id: String(normalized.calendarId || "").trim() || null,
@@ -245,18 +238,17 @@ function toRow(item: CollaboratorItem): CollaboratorRow {
 }
 
 function normalizeCollaborators(input: any): Record<string, CollaboratorItem> {
-  if (!input || typeof input !== "object") return getDefaultCollaborators();
+  if (!input || typeof input !== "object") return { ...DEFAULT_COLLABORATORS };
 
   const result: Record<string, CollaboratorItem> = {};
 
   for (const [key, value] of Object.entries(input)) {
     if (Object.keys(result).length >= MAX_COLLABORATORS) break;
     const item = sanitizeCollaborator(value as Partial<CollaboratorItem>, key);
-    item.id = salonScopedId(item.id);
     result[item.id] = item;
   }
 
-  return Object.keys(result).length ? result : getDefaultCollaborators();
+  return Object.keys(result).length ? result : { ...DEFAULT_COLLABORATORS };
 }
 
 export function serializeCollaborator(item: CollaboratorItem): CollaboratorPayload {
@@ -264,7 +256,6 @@ export function serializeCollaborator(item: CollaboratorItem): CollaboratorPaylo
 
   return {
     id: normalized.id,
-    salon_id: getSalonId(),
     name: normalized.name,
     active: normalized.active,
     calendarId: normalized.calendarId || "",
@@ -283,7 +274,7 @@ export function serializeCollaborator(item: CollaboratorItem): CollaboratorPaylo
 export function deserializeCollaborator(
   input: Partial<CollaboratorPayload>
 ): CollaboratorItem {
-  const collaborator = sanitizeCollaborator(
+  return sanitizeCollaborator(
     {
       id: input.id,
       name: input.name,
@@ -309,22 +300,18 @@ export function deserializeCollaborator(
     },
     input.id
   );
-
-  collaborator.id = salonScopedId(collaborator.id);
-  return collaborator;
 }
 
 async function seedDefaultCollaboratorsIfEmpty() {
   const { data, error } = await supabaseAdmin
     .from("collaborators")
     .select("id")
-    .eq("salon_id", getSalonId())
     .limit(1);
 
   if (error) throw error;
 
   if ((data || []).length === 0) {
-    const rows = Object.values(getDefaultCollaborators()).map(toRow);
+    const rows = Object.values(DEFAULT_COLLABORATORS).map(toRow);
     const upsert = await supabaseAdmin
       .from("collaborators")
       .upsert(rows, { onConflict: "id" });
@@ -336,7 +323,7 @@ async function seedDefaultCollaboratorsIfEmpty() {
 export async function readCollaboratorsMap() {
   await seedDefaultCollaboratorsIfEmpty();
 
-  const { data, error } = await supabaseAdmin.from("collaborators").select("*").eq("salon_id", getSalonId());
+  const { data, error } = await supabaseAdmin.from("collaborators").select("*");
   if (error) throw error;
 
   const result: Record<string, CollaboratorItem> = {};
@@ -346,7 +333,7 @@ export async function readCollaboratorsMap() {
     result[item.id] = item;
   }
 
-  return Object.keys(result).length ? result : getDefaultCollaborators();
+  return Object.keys(result).length ? result : { ...DEFAULT_COLLABORATORS };
 }
 
 export async function saveCollaboratorsMap(input: Record<string, CollaboratorItem>) {
@@ -358,7 +345,7 @@ export async function saveCollaboratorsMap(input: Record<string, CollaboratorIte
 
   const rows = Object.values(normalized).map(toRow);
 
-  const existing = await supabaseAdmin.from("collaborators").select("id").eq("salon_id", getSalonId());
+  const existing = await supabaseAdmin.from("collaborators").select("id");
   if (existing.error) throw existing.error;
 
   const keepIds = new Set(rows.map((item) => item.id));
@@ -370,7 +357,6 @@ export async function saveCollaboratorsMap(input: Record<string, CollaboratorIte
     const deleted = await supabaseAdmin
       .from("collaborators")
       .delete()
-      .eq("salon_id", getSalonId())
       .in("id", deleteIds);
 
     if (deleted.error) throw deleted.error;
@@ -398,14 +384,12 @@ export async function getCollaboratorById(collaboratorId: string) {
   const { data, error } = await supabaseAdmin
     .from("collaborators")
     .select("*")
-     .eq("salon_id", getSalonId())
-    .in("id", [normalizedId, salonScopedId(normalizedId)])
+    .eq("id", normalizedId)
     .limit(1);
 
   if (error) throw error;
 
-  const rows = (data || []) as CollaboratorRow[];
-  const row = rows.find((entry) => matchesSalonScopedId(entry.id, normalizedId)) || rows[0];
+  const row = (data || [])[0] as CollaboratorRow | undefined;
   return row ? fromRow(row) : null;
 }
 
@@ -418,7 +402,7 @@ export async function upsertCollaborator(
     .trim()
     .toLowerCase();
 
-  const isNew = !normalizedId || !all.some((item) => matchesSalonScopedId(item.id, normalizedId));
+  const isNew = !normalizedId || !all.some((item) => item.id === normalizedId);
 
   if (isNew && all.length >= MAX_COLLABORATORS) {
     throw new Error(`Puoi aggiungere massimo ${MAX_COLLABORATORS} collaboratori`);
@@ -427,14 +411,10 @@ export async function upsertCollaborator(
   const item =
     "weeklyOffDays" in (input || {}) || "morningEnabled" in (input || {})
       ? deserializeCollaborator(input as Partial<CollaboratorPayload>)
-      : (() => {
-          const normalized = sanitizeCollaborator(
-            input as Partial<CollaboratorItem>,
-            (input as any).id
-          );
-          normalized.id = salonScopedId(normalized.id);
-          return normalized;
-        })();
+      : sanitizeCollaborator(
+          input as Partial<CollaboratorItem>,
+          (input as any).id
+        );
 
   const { error } = await supabaseAdmin
     .from("collaborators")
@@ -458,8 +438,7 @@ export async function deleteCollaborator(collaboratorId: string) {
   const { error } = await supabaseAdmin
     .from("collaborators")
     .delete()
-     .eq("salon_id", getSalonId())
-    .in("id", [normalizedId, salonScopedId(normalizedId)]);
+    .eq("id", normalizedId);
 
   if (error) throw error;
 }

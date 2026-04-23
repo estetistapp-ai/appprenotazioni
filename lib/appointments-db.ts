@@ -1,6 +1,5 @@
 import { DateTime } from "luxon";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { getSalonId } from "@/lib/salon";
 
 export type AppointmentRecordInput = {
   eventId: string;
@@ -50,7 +49,6 @@ export type AppointmentRecord = {
 
 type AppointmentRow = {
   id: string;
-  salon_id?: string | null;
 
   event_id?: string | null;
   google_event_id?: string | null;
@@ -218,7 +216,6 @@ function inputToRow(input: AppointmentRecordInput) {
     endDt.isValid ? endDt.toFormat("HH:mm") : "";
 
   return {
-    salon_id: getSalonId(),
     event_id: String(input.eventId || "").trim(),
     google_event_id: String(input.eventId || "").trim(),
     calendar_id: String(input.calendarId || "").trim() || "primary",
@@ -314,7 +311,6 @@ export async function listAppointmentsByDate(
   const { data, error } = await supabaseAdmin
     .from("appointments")
     .select("*")
-    .eq("salon_id", getSalonId())
     .or(`date.eq.${normalized},date_iso.eq.${normalized}`)
     .order("start_iso", { ascending: true });
 
@@ -330,7 +326,6 @@ export async function listAppointmentsInRange(
   const { data, error } = await supabaseAdmin
     .from("appointments")
     .select("*")
-    .eq("salon_id", getSalonId())
     .gte("start_iso", fromISO)
     .lt("start_iso", toISO)
     .order("start_iso", { ascending: true });
@@ -344,7 +339,6 @@ export async function listAllAppointments(): Promise<AppointmentRecord[]> {
   const { data, error } = await supabaseAdmin
     .from("appointments")
     .select("*")
-    .eq("salon_id", getSalonId())
     .order("start_iso", { ascending: false });
 
   if (error) throw error;
@@ -360,7 +354,6 @@ export async function listAppointmentsForCollaboratorInRange(
   const { data, error } = await supabaseAdmin
     .from("appointments")
     .select("*")
-    .eq("salon_id", getSalonId())
     .eq("collaborator_id", collaboratorId)
     .gte("start_iso", fromISO)
     .lt("start_iso", toISO)
@@ -378,7 +371,6 @@ export async function deleteAppointmentRecord(eventId: string): Promise<void> {
   const { error } = await supabaseAdmin
     .from("appointments")
     .delete()
-    .eq("salon_id", getSalonId())
     .or(`event_id.eq.${normalized},google_event_id.eq.${normalized}`);
 
   if (error) throw error;
@@ -391,7 +383,6 @@ export async function getAppointmentByEventId(eventId: string): Promise<Appointm
   const { data, error } = await supabaseAdmin
     .from("appointments")
     .select("*")
-    .eq("salon_id", getSalonId())
     .or(`event_id.eq.${normalized},google_event_id.eq.${normalized}`)
     .limit(1)
     .maybeSingle();
@@ -407,7 +398,6 @@ export async function listAppointmentsByRecurringRuleId(recurringRuleId: string)
   const { data, error } = await supabaseAdmin
     .from("appointments")
     .select("*")
-    .eq("salon_id", getSalonId())
     .eq("recurring_rule_id", normalized)
     .order("start_iso", { ascending: true });
 
@@ -422,7 +412,6 @@ export async function deleteAppointmentsByRecurringRuleId(recurringRuleId: strin
   const { error } = await supabaseAdmin
     .from("appointments")
     .delete()
-    .eq("salon_id", getSalonId())
     .eq("recurring_rule_id", normalized);
 
   if (error) throw error;

@@ -191,7 +191,7 @@ function fromRow(row: CollaboratorRow): CollaboratorItem {
     row.afternoon_close ||
     DEFAULT_SETTINGS.opening.afternoon.end;
 
-  const collaborator = sanitizeCollaborator(
+  return sanitizeCollaborator(
     {
       id: row.id,
       name: row.name,

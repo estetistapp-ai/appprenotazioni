@@ -11,7 +11,7 @@ export async function GET() {
       ok: true,
       settings: {
         ...serializeBusinessSettings(settings),
-        brandTitle: "Prenotazioni Online",
+        brandTitle: "Salon Estetica",
         brandSubtitle: "Prenota il tuo trattamento in pochi secondi",
         logoUrl: "",
         icon192: "/icons/icon-192.png",

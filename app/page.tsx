@@ -257,7 +257,7 @@ const selectedService = useMemo(
 <header className="hero">
   <div className="brand">
     <div className="title">Prenotazioni Online</div>
-    <p className="subtitle">Prenota il tuo trattamento in pochi secondi</p>
+    <p className="subtitle">Prenota il tuo appuntamento in pochi secondi</p>
   </div>
 </header>
 

@@ -2,6 +2,7 @@ import { DateTime } from "luxon";
 import { TIME_ZONE } from "@/lib/business-settings";
 import { getCollaboratorById, type CollaboratorItem } from "@/lib/collaborators";
 import { listAppointmentsForCollaboratorInRange } from "@/lib/appointments-db";
+import { readBusyEventsDayCache, writeBusyEventsDayCache } from "@/lib/slot-cache";
 
 export type CalendarBooking = {
   id: string;
@@ -12,45 +13,6 @@ export type CalendarBooking = {
   calendarId: string;
   collaboratorId: string;
 };
-
-const BUSY_EVENTS_CACHE_TTL_MS = 20_000;
-
-type BusyEventsCacheEntry = {
-  expiresAt: number;
-  value: CalendarBooking[];
-};
-
-const busyEventsDayCache = new Map<string, BusyEventsCacheEntry>();
-
-function buildBusyCacheKey(collaboratorId: string, dateISO: string) {
-  return `${String(collaboratorId || "").trim().toLowerCase()}__${String(dateISO || "").trim()}`;
-}
-
-function cleanupBusyEventsDayCache() {
-  const now = Date.now();
-  for (const [key, entry] of busyEventsDayCache.entries()) {
-    if (entry.expiresAt <= now) busyEventsDayCache.delete(key);
-  }
-}
-
-function readBusyEventsDayCache(collaboratorId: string, dateISO: string) {
-  cleanupBusyEventsDayCache();
-  const key = buildBusyCacheKey(collaboratorId, dateISO);
-  const entry = busyEventsDayCache.get(key);
-  if (!entry) return null;
-  if (entry.expiresAt <= Date.now()) {
-    busyEventsDayCache.delete(key);
-    return null;
-  }
-  return entry.value;
-}
-
-function writeBusyEventsDayCache(collaboratorId: string, dateISO: string, value: CalendarBooking[]) {
-  busyEventsDayCache.set(buildBusyCacheKey(collaboratorId, dateISO), {
-    value,
-    expiresAt: Date.now() + BUSY_EVENTS_CACHE_TTL_MS,
-  });
-}
 
 export function getCalendarClient() {
   return null;

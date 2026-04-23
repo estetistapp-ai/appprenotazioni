@@ -76,7 +76,7 @@ export default function Page({ searchParams }: { searchParams: any }) {
   const name = searchParams?.name || "";
   const durationMin = Number(searchParams?.durationMin || 0) || 30;
 
-  const calendarTitle = `${service || "Appuntamento"} - Salon Estetica`;
+  const calendarTitle = `${service || "Appuntamento"} - Prenotazioni Online`;
   const calendarDescription = [
     "Promemoria appuntamento",
     name ? `Cliente: ${name}` : "",

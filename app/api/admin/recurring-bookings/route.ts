@@ -7,7 +7,6 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { TIME_ZONE } from "@/lib/business-settings";
 import { createSingleBooking } from "@/lib/booking-engine";
 import { createRecurringRule, updateRecurringRuleMeta } from "@/lib/recurring-rules";
-import { getSalonId } from "@/lib/salon";
 
 export async function POST(req: Request) {
   const unauthorized = await requireAdmin();
@@ -112,7 +111,7 @@ export async function POST(req: Request) {
           every: repeatEvery,
         });
       } else {
-        await supabaseAdmin.from("recurring_rules").delete().eq("salon_id", getSalonId()).eq("id", recurringRuleId);
+        await supabaseAdmin.from("recurring_rules").delete().eq("id", recurringRuleId);
       }
     }
 

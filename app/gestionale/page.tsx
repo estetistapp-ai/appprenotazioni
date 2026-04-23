@@ -1252,7 +1252,6 @@ const calendarGroupNames = useMemo(
               <div key={service.id} className="holidayItem">
                 <div>
                   <strong>{service.name}</strong>
-                  <div className="muted">ID: {service.id}</div>
                   <div className="muted">{service.durationMin} min · €{service.price} · {service.active ? "Attivo" : "Disattivato"}</div>
                 </div>
                 <div className="bookingActions">

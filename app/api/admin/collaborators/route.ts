@@ -3,7 +3,6 @@ export const revalidate = 0;
 
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
-import { invalidateAllSalonSlotCaches } from "@/lib/slot-cache";
 import { deleteCollaborator, readCollaboratorsList, serializeCollaborator, upsertCollaborator } from "@/lib/collaborators";
 
 export async function GET() {
@@ -19,7 +18,6 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const collaborator = await upsertCollaborator(body);
-    invalidateAllSalonSlotCaches();
     const collaborators = await readCollaboratorsList(true);
     return NextResponse.json({ ok: true, collaborator: serializeCollaborator(collaborator), collaborators: collaborators.map(serializeCollaborator) });
   } catch (error: any) {
@@ -35,7 +33,6 @@ export async function DELETE(req: Request) {
     const id = searchParams.get("id") || "";
     if (!id) return NextResponse.json({ error: "ID collaboratore mancante" }, { status: 400 });
     await deleteCollaborator(id);
-    invalidateAllSalonSlotCaches();
     const collaborators = await readCollaboratorsList(true);
     return NextResponse.json({ ok: true, collaborators: collaborators.map(serializeCollaborator) });
   } catch (error: any) {

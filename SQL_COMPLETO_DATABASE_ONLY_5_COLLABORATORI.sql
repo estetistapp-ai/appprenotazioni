@@ -412,6 +412,78 @@ begin
   end if;
 end $$;
 
+
+
+-- =====================================================
+-- DAILY SLOT CACHE
+-- =====================================================
+create table if not exists public.daily_slot_cache (
+  id uuid primary key default gen_random_uuid(),
+  salon_id text not null,
+  date text not null,
+  service_id text not null,
+  people_count integer not null default 1,
+  preferred_collaborator_id text,
+  ignore_min_advance boolean not null default false,
+  settings_json jsonb,
+  slots_json jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.daily_slot_cache
+  add column if not exists salon_id text,
+  add column if not exists date text,
+  add column if not exists service_id text,
+  add column if not exists people_count integer default 1,
+  add column if not exists preferred_collaborator_id text,
+  add column if not exists ignore_min_advance boolean default false,
+  add column if not exists settings_json jsonb,
+  add column if not exists slots_json jsonb default '[]'::jsonb,
+  add column if not exists created_at timestamptz default now(),
+  add column if not exists updated_at timestamptz default now();
+
+update public.daily_slot_cache
+set
+  salon_id = coalesce(salon_id, 'salone_1'),
+  people_count = greatest(1, coalesce(people_count, 1)),
+  ignore_min_advance = coalesce(ignore_min_advance, false),
+  slots_json = coalesce(slots_json, '[]'::jsonb),
+  created_at = coalesce(created_at, now()),
+  updated_at = coalesce(updated_at, now())
+where salon_id is null
+   or date is null
+   or service_id is null
+   or people_count is null
+   or ignore_min_advance is null
+   or slots_json is null
+   or created_at is null
+   or updated_at is null;
+
+alter table public.daily_slot_cache
+  alter column salon_id set not null,
+  alter column date set not null,
+  alter column service_id set not null,
+  alter column people_count set not null,
+  alter column ignore_min_advance set not null,
+  alter column slots_json set not null,
+  alter column created_at set not null,
+  alter column updated_at set not null;
+
+create unique index if not exists idx_daily_slot_cache_lookup
+on public.daily_slot_cache (
+  salon_id,
+  date,
+  service_id,
+  people_count,
+  preferred_collaborator_id,
+  ignore_min_advance
+);
+
+create index if not exists idx_daily_slot_cache_salon_date
+on public.daily_slot_cache (salon_id, date);
+
+
 -- =====================================================
 -- UPDATED_AT TRIGGER
 -- =====================================================
@@ -442,5 +514,21 @@ create trigger trg_collaborators_updated_at
 before update on public.collaborators
 for each row
 execute function public.set_updated_at();
+
+
+drop trigger if exists trg_daily_slot_cache_updated_at on public.daily_slot_cache;
+create trigger trg_daily_slot_cache_updated_at
+before update on public.daily_slot_cache
+for each row
+execute function public.set_updated_at();
+
+alter table public.daily_slot_cache enable row level security;
+
+drop policy if exists daily_slot_cache_all on public.daily_slot_cache;
+create policy daily_slot_cache_all
+on public.daily_slot_cache
+for all
+using (true)
+with check (true);
 
 commit;

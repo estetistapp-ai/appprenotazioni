@@ -33,7 +33,7 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id") || "";
-    if (!id) return NextResponse.json({ error: "ID servizio mancante" }, { status: 400 });
+    if (!id) return NextResponse.json({ error: "Servizio mancante" }, { status: 400 });
     await deleteService(id);
     invalidateAllSalonSlotCaches();
     const services = await readServicesList(true);

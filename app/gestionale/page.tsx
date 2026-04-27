@@ -1323,7 +1323,6 @@ const calendarGroupNames = useMemo(
               <div key={collaborator.id} className="holidayItem">
                 <div>
                   <strong>{collaborator.name}</strong>
-                  <div className="muted">ID: {collaborator.id}</div>
                   <div className="muted">Riposo settimanale: {collaborator.weeklyOffDays.length ? WEEKDAYS.filter((day) => collaborator.weeklyOffDays.includes(day.value)).map((day) => day.label).join(", ") : "nessuno"}</div>
                   <div className="muted">Ferie impostate: {collaborator.holidays.length}</div>
                   <div className="muted">Mattina: {collaborator.morningEnabled ? `${collaborator.morningOpen}-${collaborator.morningClose}` : "off"} · Pomeriggio: {collaborator.afternoonEnabled ? `${collaborator.afternoonOpen}-${collaborator.afternoonClose}` : "off"}</div>

@@ -93,7 +93,7 @@ type RecurringForm = {
 const DEFAULT_SETTINGS: BusinessSettings = {
   slotIntervalMin: 15,
   minAdvanceMin: 60,
-  closedWeekdays: [1, 7],
+  closedWeekdays: [0, 1],
   holidays: [],
   morningEnabled: true,
   morningOpen: "09:00",
@@ -104,13 +104,13 @@ const DEFAULT_SETTINGS: BusinessSettings = {
 };
 
 const WEEKDAYS = [
+  { value: 0, label: "Domenica" },
   { value: 1, label: "Lunedì" },
   { value: 2, label: "Martedì" },
   { value: 3, label: "Mercoledì" },
   { value: 4, label: "Giovedì" },
   { value: 5, label: "Venerdì" },
   { value: 6, label: "Sabato" },
-  { value: 7, label: "Domenica" },
 ];
 
 function todayISO() {

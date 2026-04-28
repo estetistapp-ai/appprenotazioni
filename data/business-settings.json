@@ -2,8 +2,8 @@
   "slotIntervalMin": 15,
   "minAdvanceMin": 60,
   "closedWeekdays": [
-    1,
-    7
+    0,
+    1
   ],
   "holidays": [],
   "morningEnabled": true,
